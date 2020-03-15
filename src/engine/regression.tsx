@@ -6,7 +6,7 @@ const hypothesis = (coefficients: Array<number>, datum: Row) => {
   return MathJs.dot(coefficients, datum);
 };
 
-const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output: Array<number>) => {
+const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output: Array<number>, learningRate: number) => {
   const errorDelta: Array<number> = [];
   let cost = 0;
 
@@ -21,10 +21,9 @@ const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output:
     return MathJs.dot(errorDelta, xis);
   });
 
-  const learningRate = -0.1;
   return {
     cost,
-    coefficients: MathJs.add(coefficients, MathJs.multiply(deltaCoefficients, learningRate)) as Array<number>
+    coefficients: MathJs.add(coefficients, MathJs.multiply(deltaCoefficients, -learningRate)) as Array<number>
   };
 };
 

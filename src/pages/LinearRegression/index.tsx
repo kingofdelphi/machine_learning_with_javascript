@@ -33,13 +33,14 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
   });
 }
 
-let lastError = 1e9;
 let coefficients = [0, 0];
 let regressionLine : fabric.Line;
-function solve(fabricCanvas: fabric.Canvas) {
+let message : fabric.Text;
+function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number) {
   const normInfo = normalizeData(data, output);
-  const result = stepSolve(coefficients, normInfo.dataset, normInfo.output);
+  const result = stepSolve(coefficients, normInfo.dataset, normInfo.output, learningRate);
   coefficients = result.coefficients;
+  console.log(coefficients);
   const data1 = [1, -10];
   const y1 = hypothesis(coefficients, data1);
 
@@ -53,7 +54,12 @@ function solve(fabricCanvas: fabric.Canvas) {
   if (!regressionLine) {
     regressionLine = new fabric.Line();
     fabricCanvas.add(regressionLine);
+    message = new fabric.Text("");
+    fabricCanvas.add(message);
   }
+  message.set({
+    text: `Iterations Left: ${iterationsLeft}`
+  });
   regressionLine.set({
     stroke: 'red',
     strokeWidth: 1,
@@ -66,15 +72,22 @@ function solve(fabricCanvas: fabric.Canvas) {
   return result.cost;
 }
 
-function startSolve(fabricCanvas: fabric.Canvas) {
-  lastError = 1e9;
+let animFrameId: number;
+
+function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number) {
+  coefficients = [0, 0];
   const updater = () => {
-    const error = solve(fabricCanvas);
+    iterations--
+    solve(fabricCanvas, iterations, learningRate);
     fabricCanvas.renderAll();
-    if (error === lastError) return;
-    fabric.util.requestAnimFrame(updater);
+    if (iterations === 0) return;
+    animFrameId = window.requestAnimationFrame(updater);
   };
   updater();
+}
+
+function stopSolve() {
+  cancelAnimationFrame(animFrameId);
 }
 
 function LinearRegression(props: Props) {
@@ -97,10 +110,13 @@ function LinearRegression(props: Props) {
     setFabricCanvas(fcanvas);
     return () => {
       fcanvas.dispose();
+      stopSolve();
     }
   }, []);
 
   const [cls, setClass] = useState('green');
+  const [iterations, setIterations] = useState(10000);
+  const [learningRate, setLearningRate] = useState(0.001);
 
   const changeClass = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newClass = e.target.value;
@@ -113,21 +129,30 @@ function LinearRegression(props: Props) {
       alert("please add some points");
       return;
     }
-    startSolve(fabricCanvas!);
+    startSolve(fabricCanvas!, iterations, learningRate);
   }
 
   return (
     <div className={styles.main}>
       <div className={styles.menu}>
-        <label className={styles.green}>
+        <label className={styles.cls + " " + styles.green}>
           <input checked={cls === 'green'} value="green" type="radio" name="class" onChange={changeClass} />
           <span></span>
         </label>
-        <label className={styles.red}>
+        <label className={styles.cls + " " + styles.red}>
           <input checked={cls === 'red'} value="red" type="radio" name="class" onChange={changeClass} />
           <span></span>
         </label>
         <button onClick={animSolve}>Solve</button>
+        <button onClick={stopSolve}>Stop</button>
+        <label>
+          Iterations
+          <input type="number" value={iterations} onChange={e => setIterations(+e.target.value)} />
+        </label>
+        <label>
+          Learning Rate
+          <input type="number" min="0" value={learningRate} onChange={e => setLearningRate(+e.target.value)} />
+        </label>
         <span>Please add few points by clicking below</span>
       </div>
       <div ref={ref} className={styles["fabric-wrapper"]}>

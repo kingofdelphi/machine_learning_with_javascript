@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import MenuSelect from './components/MenuSelect';
 
 import styles from "./App.module.scss";
+import LinearRegression from './pages/LinearRegression';
 
 function App() {
   const [selectedChoice, setSelectedChoice] = useState('linear_regression');
@@ -36,7 +37,8 @@ function App() {
         />
       </nav>
       <main>
-        {selectedChoice}
+        {selectedChoice === 'line' && <div>line equation</div>}
+        {selectedChoice === 'linear_regression' && <LinearRegression />}
       </main>
     </div>
   );

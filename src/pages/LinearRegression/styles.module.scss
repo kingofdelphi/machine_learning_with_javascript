@@ -1,0 +1,63 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fabric-wrapper {
+  flex: 1;
+}
+
+.menu {
+  box-shadow: 1px 1px 5px black;
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  button {
+    padding: 10px 40px;
+  }
+  label {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+
+    &.green {
+      color: green;
+    }
+
+    &.red {
+      color: red;
+    }
+
+    input {
+      display: none;
+    }
+
+    position: relative;
+
+    input {
+
+      &+span {
+        color: inherit;
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        background: currentColor;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+      }
+
+
+      &:checked+span {
+        border: 4px solid black;
+      }
+    }
+
+    &+* {
+      margin-left: 20px;
+    }
+  }
+}

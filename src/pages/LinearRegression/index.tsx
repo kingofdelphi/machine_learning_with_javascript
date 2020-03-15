@@ -118,7 +118,6 @@ function LinearRegression(props: Props) {
 
   return (
     <div className={styles.main}>
-      <h2>Linear Regression</h2>
       <div className={styles.menu}>
         <label className={styles.green}>
           <input checked={cls === 'green'} value="green" type="radio" name="class" onChange={changeClass} />
@@ -129,6 +128,7 @@ function LinearRegression(props: Props) {
           <span></span>
         </label>
         <button onClick={animSolve}>Solve</button>
+        <span>Please add few points by clicking below</span>
       </div>
       <div ref={ref} className={styles["fabric-wrapper"]}>
       </div>

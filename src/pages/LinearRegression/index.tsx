@@ -1,13 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { fabric } from 'fabric';
+import Input from "../../components/Input";
 
 import stepSolve, { Row, normalizeData, hypothesis, denormalizeData } from '../../engine/regression';
 
 import styles from './styles.module.scss';
-
-interface Props {
-
-}
 
 const data : Array<Row> = [];
 const output : Array<number> = [];
@@ -40,7 +37,6 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
   const normInfo = normalizeData(data, output);
   const result = stepSolve(coefficients, normInfo.dataset, normInfo.output, learningRate);
   coefficients = result.coefficients;
-  console.log(coefficients);
   const data1 = [1, -10];
   const y1 = hypothesis(coefficients, data1);
 
@@ -90,7 +86,7 @@ function stopSolve() {
   cancelAnimationFrame(animFrameId);
 }
 
-function LinearRegression(props: Props) {
+function LinearRegression() {
   const ref = useRef(null);
 
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
@@ -145,20 +141,14 @@ function LinearRegression(props: Props) {
         </label>
         <button onClick={animSolve}>Solve</button>
         <button onClick={stopSolve}>Stop</button>
-        <label>
-          Iterations
-          <input type="number" value={iterations} onChange={e => setIterations(+e.target.value)} />
-        </label>
-        <label>
-          Learning Rate
-          <input type="number" min="0" value={learningRate} onChange={e => setLearningRate(+e.target.value)} />
-        </label>
+        <Input type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
+        <Input type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
         <span>Please add few points by clicking below</span>
       </div>
       <div ref={ref} className={styles["fabric-wrapper"]}>
       </div>
     </div>
-  )
+  );
 }
 
 export default LinearRegression

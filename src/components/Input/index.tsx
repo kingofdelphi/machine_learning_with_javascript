@@ -1,13 +1,16 @@
 import React from "react";
 
-import styled from 'styled-components';
+import styled, { StyledComponent } from 'styled-components';
 
-const Label = styled.label`
+const Label:StyledComponent<any, any> = styled.label`
   padding: 5px;
   display: flex;
   align-items: center;
+  span {
+    font-weight: 600;
+  }
   input {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     margin-left: 10px;
   }
 `;

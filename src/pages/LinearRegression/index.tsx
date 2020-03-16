@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { fabric } from 'fabric';
+import styled from 'styled-components';
+
 import Input from "../../components/Input";
 
 import stepSolve, { Row, normalizeData, hypothesis, denormalizeData } from '../../engine/regression';
@@ -86,6 +88,33 @@ function stopSolve() {
   cancelAnimationFrame(animFrameId);
 }
 
+const RadioButton = styled.button<{ selected: boolean, color: string }>`
+  min-width: 30px;
+  min-height: 30px;
+  max-width: 30px;
+  max-height: 30px;
+  cursor: pointer;
+  &:focus {
+    outline: none;
+  }
+  color: ${props => props.color};
+  background: ${props => props.color};
+  border-radius: 50%;
+  border: ${props => `8px solid ${props.selected ? "rgba(0, 0, 0, .3)" : "currentColor"}`};
+`;
+
+const Button = styled.button`
+  padding: 10px 20px;
+`;
+
+const Main = styled.div`
+  display: flex;
+  height: 100%;
+  label > span {
+    width: 110px;
+  }
+`;
+
 function LinearRegression() {
   const ref = useRef(null);
 
@@ -112,10 +141,11 @@ function LinearRegression() {
 
   const [cls, setClass] = useState('green');
   const [iterations, setIterations] = useState(10000);
-  const [learningRate, setLearningRate] = useState(0.001);
+  const [learningRate, setLearningRate] = useState(0.1);
+  const [degree, setDegree] = useState(1);
 
-  const changeClass = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newClass = e.target.value;
+  const changeClass = (cls : string) => {
+    const newClass = cls;
     setClass(newClass);
     stateRef.current.class = newClass;
   }
@@ -129,25 +159,24 @@ function LinearRegression() {
   }
 
   return (
-    <div className={styles.main}>
-      <div className={styles.menu}>
-        <label className={styles.cls + " " + styles.green}>
-          <input checked={cls === 'green'} value="green" type="radio" name="class" onChange={changeClass} />
-          <span></span>
-        </label>
-        <label className={styles.cls + " " + styles.red}>
-          <input checked={cls === 'red'} value="red" type="radio" name="class" onChange={changeClass} />
-          <span></span>
-        </label>
-        <button onClick={animSolve}>Solve</button>
-        <button onClick={stopSolve}>Stop</button>
-        <Input type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
-        <Input type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
-        <span>Please add few points by clicking below</span>
-      </div>
+    <Main>
       <div ref={ref} className={styles["fabric-wrapper"]}>
       </div>
-    </div>
+      <div className={styles.menu}>
+        <div className={styles['cls-buttons']}>
+          <RadioButton color="green" selected={cls === "green"} onClick={() => changeClass('green')} />
+          <RadioButton color="red" selected={cls === "red"} onClick={() => changeClass('red')} />
+          <span>Select the class and <br></br>click on middle window to drop</span>
+        </div>
+        <div className={styles["action-buttons"]}>
+          <Button onClick={animSolve}>Solve</Button>
+          <Button onClick={stopSolve}>Stop</Button>
+        </div>
+        <Input type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
+        <Input type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
+        <Input type="number" label="Degree" value={"" + degree} onChange={v => setDegree(+v)} />
+      </div>
+    </Main>
   );
 }
 

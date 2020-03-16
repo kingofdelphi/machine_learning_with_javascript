@@ -32,51 +32,60 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
   });
 }
 
-let coefficients = [0, 0];
-let regressionLine : fabric.Line;
+let coefficients: Array<number>;
+let regressionLine : Array<fabric.Line> = [];
 let message : fabric.Text;
-function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number) {
+function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number, degree: number) {
   const normInfo = normalizeData(data, output);
-  const result = stepSolve(coefficients, normInfo.dataset, normInfo.output, learningRate);
+  const result = stepSolve(coefficients, normInfo.dataset, normInfo.output, learningRate, degree);
   coefficients = result.coefficients;
-  const data1 = [1, -10];
-  const y1 = hypothesis(coefficients, data1);
 
-  const data2 = [1, 10];
-  const y2 = hypothesis(coefficients, data2);
+  const count = 500;
+  const reg_data: Array<Row> = [];
+  const reg_output: Array<number> = [];
+  const L = -4, R = 4;
+  for (let i = 0; i < count; ++i) {
+    reg_data.push([1, i === 0 ? L : L + (R - L) * i / (count - 1)])
+    reg_output.push(hypothesis(coefficients, reg_data[i]));
+  }
 
-  const regression_line = denormalizeData([data1, data2], [y1, y2], normInfo.featureMeta, normInfo.outputMeta);
+  const regression_line = denormalizeData(reg_data, reg_output, normInfo.featureMeta, normInfo.outputMeta);
   const pts = regression_line.dataset;
   const ycords = regression_line.output;
 
-  if (!regressionLine) {
-    regressionLine = new fabric.Line();
-    fabricCanvas.add(regressionLine);
+  if (regressionLine.length === 0) {
+    for (let i = 0; i + 1 < count; ++i) {
+      regressionLine.push(new fabric.Line());
+      fabricCanvas.add(regressionLine[i]);
+    }
     message = new fabric.Text("");
     fabricCanvas.add(message);
   }
   message.set({
     text: `Iterations Left: ${iterationsLeft}`
   });
-  regressionLine.set({
-    stroke: 'red',
-    strokeWidth: 1,
-    objectCaching: false,
-    x1: pts[0][1],
-    y1: ycords[0],
-    x2: pts[1][1],
-    y2: ycords[1]
-  })
+  for (let i = 0; i + 1 < count; ++i) {
+    const line = regressionLine[i];
+    line.set({
+      stroke: ['red', 'green'][i % 2],
+      strokeWidth: 2,
+      objectCaching: false,
+      x1: pts[i][1],
+      y1: ycords[i],
+      x2: pts[i + 1][1],
+      y2: ycords[i + 1],
+    })
+  }
   return result.cost;
 }
 
 let animFrameId: number;
 
-function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number) {
-  coefficients = [0, 0];
+function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number, degree: number) {
+  coefficients = new Array(degree + 1).fill(0);
   const updater = () => {
     iterations--
-    solve(fabricCanvas, iterations, learningRate);
+    solve(fabricCanvas, iterations, learningRate, degree);
     fabricCanvas.renderAll();
     if (iterations === 0) return;
     animFrameId = window.requestAnimationFrame(updater);
@@ -155,7 +164,7 @@ function LinearRegression() {
       alert("please add some points");
       return;
     }
-    startSolve(fabricCanvas!, iterations, learningRate);
+    startSolve(fabricCanvas!, iterations, learningRate, degree);
   }
 
   return (

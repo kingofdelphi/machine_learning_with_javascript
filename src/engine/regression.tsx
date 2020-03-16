@@ -3,7 +3,7 @@ import * as MathJs from 'mathjs';
 export type Row = Array<number>;
 
 const hypothesis = (coefficients: Array<number>, datum: Row) => {
-  return MathJs.dot(coefficients, coefficients.map((_, i) => Math.pow(datum[Math.min(i, 1)], i)));
+  return MathJs.dot(coefficients, datum);
 };
 
 const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output: Array<number>, learningRate: number, degree: number) => {
@@ -17,7 +17,7 @@ const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output:
   // err = (h(xi) - yi)^2 + ....
   // de/d(ci) = 2*(h(xj)-yj)*xji
   const deltaCoefficients = coefficients.map((_, i) => {
-    const xis = trainingSet.map(d => Math.pow(d[Math.min(i, 1)], i));
+    const xis = trainingSet.map(d => d[i]);
     return MathJs.dot(errorDelta, xis);
   });
 

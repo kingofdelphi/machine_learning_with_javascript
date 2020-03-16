@@ -18,6 +18,7 @@ const GridContainer = styled.div`
 
   header {
     grid-area: header;
+    background: lightblue;
     box-shadow: 0px 1px 2px black;
   }
 

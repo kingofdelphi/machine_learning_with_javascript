@@ -163,6 +163,20 @@ function LinearRegression() {
 
   const stateRef = useRef({ class: 'green' });
 
+  const reset = () => {
+    stopSolve();
+    x_coords = [];
+    y_coords = [];
+    solveAnimationInfo.regressionLines = [];
+    solveAnimationInfo.message = undefined;
+    if (fabricCanvas) {
+      // why this check, 
+      // because reset is a closure, this method is called by useEffect hook during unmount
+      // as well as button reset
+      fabricCanvas.clear();
+    }
+  };
+
   useEffect(() => {
     const node : HTMLElement = ref.current!;
     const canvas = document.createElement('canvas');
@@ -175,8 +189,8 @@ function LinearRegression() {
     updateFabricCanvas(fcanvas, stateRef.current);
     setFabricCanvas(fcanvas);
     return () => {
+      reset();
       fcanvas.dispose();
-      stopSolve();
     }
   }, []);
 
@@ -199,15 +213,6 @@ function LinearRegression() {
     stopSolve();
     startSolve(fabricCanvas!, iterations, learningRate, degree);
   }
-
-  const reset = () => {
-    stopSolve();
-    x_coords = [];
-    y_coords = [];
-    solveAnimationInfo.regressionLines = [];
-    solveAnimationInfo.message = undefined;
-    fabricCanvas!.clear();
-  };
 
   return (
     <Main>

@@ -17,15 +17,16 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
   const mouseDownHandler = (event: fabric.IEvent) => {
     const x = event.pointer!.x;
     const y = event.pointer!.y;
-    user_data.push([x, y]);
+    const r = 20;
+    user_data.push([x - r / 2, y - r / 2]);
     user_output.push(state.class! === 'green' ? 1 : -1);
     console.log(user_output);
     const circle = new fabric.Circle({
-      left: x,
-      top: y,
+      left: x - r / 2,
+      top: y - r / 2,
       radius: 3,
       stroke: state.class,
-      strokeWidth: 28,
+      strokeWidth: r - 3,
       fill: ''
     });
     canvas.add(circle);

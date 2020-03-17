@@ -2,27 +2,27 @@ import * as MathJs from 'mathjs';
 import { Row } from './common';
 
 const hypothesis = (coefficients: Array<number>, datum: Row) => {
-  return MathJs.dot(coefficients, datum);
+  return MathJs.dot(coefficients, datum) >= 0 ? 1 : -1;
 };
 
 const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output: Array<number>, learningRate: number, degree: number) => {
   const errorDelta: Array<number> = [];
   let cost = 0;
 
+  let new_coefficients = [...coefficients];
+
   for (let i = 0; i < trainingSet.length; ++i) {
-    errorDelta.push(hypothesis(coefficients, trainingSet[i]) - output[i]);
+    const currentOutput = hypothesis(new_coefficients, trainingSet[i]);
+    const deltaOutput = currentOutput - output[i]; 
+    if (deltaOutput === 0) continue;
+    console.log('err', i, currentOutput, output[i]);
+    new_coefficients = MathJs.add(new_coefficients, MathJs.multiply(-learningRate * deltaOutput, trainingSet[i])) as Array<number>;
     cost += errorDelta[i] * errorDelta[i];
   }
-  // err = (h(xi) - yi)^2 + ....
-  // de/d(ci) = 2*(h(xj)-yj)*xji
-  const deltaCoefficients = coefficients.map((_, i) => {
-    const xis = trainingSet.map(d => d[i]);
-    return MathJs.dot(errorDelta, xis);
-  });
 
   return {
     cost,
-    coefficients: MathJs.add(coefficients, MathJs.multiply(deltaCoefficients, -learningRate)) as Array<number>
+    coefficients: new_coefficients
   };
 };
 

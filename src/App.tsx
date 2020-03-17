@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import MenuSelect from './components/MenuSelect';
 import LinearRegression from './pages/LinearRegression';
+import Perceptron from './pages/Perceptron';
 
 import styled from 'styled-components';
 
@@ -37,7 +38,7 @@ const GridContainer = styled.div`
 `;
 
 function App() {
-  const [selectedChoice, setSelectedChoice] = useState('linear_regression');
+  const [selectedChoice, setSelectedChoice] = useState('perceptron');
   return (
     <GridContainer>
       <header>
@@ -62,6 +63,11 @@ function App() {
                 id: "linear_regression",
                 label: "Linear Regression",
                 path: "/linear_regression"
+              },
+              {
+                id: "perceptron",
+                label: "Perceptron",
+                path: "/perceptron"
               }
             ]
           }
@@ -70,6 +76,7 @@ function App() {
       <main>
         {selectedChoice === 'line' && <div>line equation</div>}
         {selectedChoice === 'linear_regression' && <LinearRegression />}
+        {selectedChoice === 'perceptron' && <Perceptron />}
       </main>
     </GridContainer>
   );

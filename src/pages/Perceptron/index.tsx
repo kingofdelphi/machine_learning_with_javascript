@@ -1,23 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
+import * as MathJs from "mathjs";
 import { fabric } from 'fabric';
 import styled from 'styled-components';
 
 import Input from "../../components/Input";
 
-import stepSolve, { hypothesis } from '../../engine/regression';
+import stepSolve, { hypothesis } from '../../engine/perceptron';
 import { Row, normalizeData, denormalizeData } from '../../engine/common';
 
 import styles from './styles.module.scss';
 
-let x_coords : Array<number> = [];
-let y_coords : Array<number> = [];
+let user_data : Array<Row> = [];
+let user_output : Array<number> = [];
 
 function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any }) {
   const mouseDownHandler = (event: fabric.IEvent) => {
     const x = event.pointer!.x;
     const y = event.pointer!.y;
-    x_coords.push(x);
-    y_coords.push(y);
+    user_data.push([x, y]);
+    user_output.push(state.class! === 'green' ? 1 : -1);
+    console.log(user_output);
     const circle = new fabric.Circle({
       left: x,
       top: y,
@@ -33,11 +35,6 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
   });
 }
 
-
-const buildRowFromXCoord = (x_coord: number, degree: number) => {
-    return new Array(degree + 1).fill(0).map((_, i) => Math.pow(x_coord, i));
-};
-
 interface TrainingInfo {
   trainingData: Array<Row>;
   trainingOutput: Array<number>;
@@ -51,71 +48,64 @@ const trainingInfo: TrainingInfo = {
 };
 
 interface SolveAnimationInfo {
-  regressionLines: Array<fabric.Line>;
-  segmentCount: number;
+  regressionLine?: fabric.Line;
   message?: fabric.Text;
   animFrameId?: number;
 };
 
-const solveAnimationInfo: SolveAnimationInfo = {
-  regressionLines: [],
-  segmentCount: 500
-};
+const solveAnimationInfo: SolveAnimationInfo = {};
 
 function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number, degree: number) {
   const { trainingData, trainingOutput, coefficients } = trainingInfo;
   const normInfo = normalizeData(trainingData, trainingOutput);
-  const result = stepSolve(coefficients, normInfo.dataset, normInfo.output, learningRate, degree);
+  const result = stepSolve(coefficients, normInfo.dataset, trainingOutput, learningRate, degree);
   trainingInfo.coefficients = result.coefficients;
 
-  const regData: Array<Row> = [];
-  const regOutput: Array<number> = [];
-  const { segmentCount, regressionLines } = solveAnimationInfo;
-  const L = -4, R = 4;
-  for (let i = 0; i < segmentCount; ++i) {
-    regData.push(buildRowFromXCoord(i === 0 ? L : L + (R - L) * i / (segmentCount - 1), degree));
-    regOutput.push(hypothesis(coefficients, regData[i]));
-  }
+  const { regressionLine } = solveAnimationInfo;
 
   solveAnimationInfo.message!.set({
     text: `Iterations Left: ${iterationsLeft}`
   });
 
-  const regression_line = denormalizeData(regData, regOutput, normInfo.featureMeta, normInfo.outputMeta);
-  const pts = regression_line.dataset;
-  const ycords = regression_line.output;
+  const [bias, ...w] = coefficients;
+  const mag = MathJs.norm(w);
+  const unitW = MathJs.divide(w, mag) as Array<number>;
+  const distance = -bias / (mag as number);
+  const point = MathJs.multiply(unitW, distance) as Array<number>;
+  const rotated = [unitW[1], -unitW[0]];
 
-  for (let i = 0; i + 1 < segmentCount; ++i) {
-    const line = regressionLines[i];
-    line.set({
-      stroke: ['red', 'green'][i % 2],
-      strokeWidth: 2,
-      objectCaching: false,
-      x1: pts[i][1],
-      y1: ycords[i],
-      x2: pts[i + 1][1],
-      y2: ycords[i + 1],
-    })
-  }
+  const lpoint = MathJs.add(point, MathJs.multiply(rotated, -20)) as Array<number>;
+  const rpoint = MathJs.add(point, MathJs.multiply(rotated, 20)) as Array<number>;
+  
+  const boundaryInfo = denormalizeData([[1, ...point], [1, ...lpoint], [1, ...rpoint]], [0], normInfo.featureMeta, normInfo.outputMeta);
+  regressionLine!.set({
+    stroke: ['red', 'green'][0 % 2],
+    strokeWidth: 2,
+    objectCaching: false,
+    x1: boundaryInfo.dataset[1][1],
+    y1: boundaryInfo.dataset[1][2],
+    x2: boundaryInfo.dataset[2][1],
+    y2: boundaryInfo.dataset[2][2],
+  })
   return result.cost;
 }
 
 function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number, degree: number) {
-  trainingInfo.trainingData = x_coords.map(x_coord => {
-    return buildRowFromXCoord(x_coord, degree);
+  trainingInfo.trainingData = user_data.map(x_coord => {
+    return [1, ...x_coord]
   });
-  trainingInfo.trainingOutput = y_coords;
+  trainingInfo.trainingOutput = user_output;
   trainingInfo.coefficients = new Array(degree + 1).fill(0);
   
   // add UI info for fabric canvas
-  if (solveAnimationInfo.regressionLines.length === 0) {
-    for (let i = 0; i + 1 < solveAnimationInfo.segmentCount; ++i) {
-      solveAnimationInfo.regressionLines.push(new fabric.Line());
-      fabricCanvas.add(solveAnimationInfo.regressionLines[i]);
-    }
+  if (!solveAnimationInfo.regressionLine) {
+    solveAnimationInfo.regressionLine = new fabric.Line();
+    fabricCanvas.add(solveAnimationInfo.regressionLine);
+
     solveAnimationInfo.message = new fabric.Text("");
     fabricCanvas.add(solveAnimationInfo.message);
   }
+
   const updater = () => {
     iterations--
     solve(fabricCanvas, iterations, learningRate, degree);
@@ -157,7 +147,7 @@ const Main = styled.div`
   }
 `;
 
-function LinearRegression() {
+function Perceptron() {
   const ref = useRef(null);
 
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
@@ -166,9 +156,9 @@ function LinearRegression() {
 
   const reset = () => {
     stopSolve();
-    x_coords = [];
-    y_coords = [];
-    solveAnimationInfo.regressionLines = [];
+    user_data = [];
+    user_output = [];
+    solveAnimationInfo.regressionLine = undefined;
     solveAnimationInfo.message = undefined;
     if (fabricCanvas) {
       // why this check, 
@@ -179,7 +169,7 @@ function LinearRegression() {
   };
 
   useEffect(() => {
-    const node : HTMLElement = ref.current!;
+    const node: HTMLElement = ref.current!;
     const canvas = document.createElement('canvas');
     canvas.id = 'canvas';
     node.append(canvas);
@@ -197,17 +187,17 @@ function LinearRegression() {
 
   const [cls, setClass] = useState('green');
   const [iterations, setIterations] = useState(10000);
-  const [learningRate, setLearningRate] = useState(0.1);
-  const [degree, setDegree] = useState(1);
+  const [learningRate, setLearningRate] = useState(0.001);
+  const [degree, setDegree] = useState(2);
 
-  const changeClass = (cls : string) => {
+  const changeClass = (cls: string) => {
     const newClass = cls;
     setClass(newClass);
     stateRef.current.class = newClass;
   }
 
   const animSolve = () => {
-    if (x_coords.length === 0) {
+    if (user_data.length === 0) {
       alert("please add some points");
       return;
     }
@@ -232,10 +222,9 @@ function LinearRegression() {
         </div>
         <Input type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
         <Input type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
-        <Input type="number" label="Degree" value={"" + degree} onChange={v => setDegree(+v)} />
       </div>
     </Main>
   );
 }
 
-export default LinearRegression
+export default Perceptron

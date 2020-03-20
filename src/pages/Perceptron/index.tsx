@@ -5,7 +5,7 @@ import styled from 'styled-components';
 
 import Input from "../../components/Input";
 
-import stepSolve, { hypothesis } from '../../engine/perceptron';
+import stepSolve, { } from '../../engine/perceptron';
 import { Row, normalizeData, denormalizeData } from '../../engine/common';
 
 import styles from './styles.module.scss';
@@ -20,7 +20,6 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
     const r = 20;
     user_data.push([x - r / 2, y - r / 2]);
     user_output.push(state.class! === 'green' ? 1 : -1);
-    console.log(user_output);
     const circle = new fabric.Circle({
       left: x - r / 2,
       top: y - r / 2,
@@ -49,67 +48,109 @@ const trainingInfo: TrainingInfo = {
 };
 
 interface SolveAnimationInfo {
-  regressionLine?: fabric.Line;
+  regressionLines: Array<fabric.Line>;
   message?: fabric.Text;
   animFrameId?: number;
 };
 
-const solveAnimationInfo: SolveAnimationInfo = {};
+const solveAnimationInfo: SolveAnimationInfo = {
+  regressionLines: []
+};
 
-function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number, degree: number) {
+function buildFeatureVectorFromPoint(point: Array<number>) {
+  return [1, ...point, point[0] * point[0], point[1] * point[1]]
+}
+
+const generatePointsFromCoefficients = (coefficients: Array<number>): { points1: Array<Row>, points2: Array<Row> } => {
+  const points: Array<Array<number>> = [];
+  // bias + ax + by + cx^2 + dy^2 = 0
+  const gety = (x: number) => {
+      const C = coefficients[0] + coefficients[1] * x + coefficients[3] * x * x;
+      const A = coefficients[4];
+      const B = coefficients[2];
+      const det = B * B - 4 * A * C;
+      if (det < 0) {
+        return [];
+      }
+      const f = Math.sqrt(det);
+      return [
+        [x, (-B + f) / (2 * A)],
+        [x, (-B - f) / (2 * A)]
+      ];
+  };
+  const points2: Array<Array<number>> = []
+  for (let x = -10 ; x <= 10; x += 0.005) {
+    const pts = gety(x);
+    if (pts.length > 0) {
+      points.push(pts[0]);
+      if (pts[1]) points2.push(pts[1])
+    }
+  }
+  return {
+    points1: points,
+    points2
+  }
+}
+
+function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number) {
   const { trainingData, trainingOutput, coefficients } = trainingInfo;
   const normInfo = normalizeData(trainingData, trainingOutput);
-  const result = stepSolve(coefficients, normInfo.dataset, trainingOutput, learningRate, degree);
+  const result = stepSolve(coefficients, normInfo.dataset, trainingOutput, learningRate);
   trainingInfo.coefficients = result.coefficients;
 
-  const { regressionLine } = solveAnimationInfo;
+  const { regressionLines } = solveAnimationInfo;
 
   solveAnimationInfo.message!.set({
     text: `Iterations Left: ${iterationsLeft}`
   });
 
-  const [bias, ...w] = coefficients;
-  const mag = MathJs.norm(w);
-  const unitW = MathJs.divide(w, mag) as Array<number>;
-  const distance = -bias / (mag as number);
-  const point = MathJs.multiply(unitW, distance) as Array<number>;
-  const rotated = [unitW[1], -unitW[0]];
+  while (regressionLines.length) fabricCanvas.remove(regressionLines.pop()!);
 
-  const lpoint = MathJs.add(point, MathJs.multiply(rotated, -20)) as Array<number>;
-  const rpoint = MathJs.add(point, MathJs.multiply(rotated, 20)) as Array<number>;
-  
-  const boundaryInfo = denormalizeData([[1, ...point], [1, ...lpoint], [1, ...rpoint]], [0], normInfo.featureMeta, normInfo.outputMeta);
-  regressionLine!.set({
-    stroke: ['red', 'green'][0 % 2],
-    strokeWidth: 2,
-    objectCaching: false,
-    x1: boundaryInfo.dataset[1][1],
-    y1: boundaryInfo.dataset[1][2],
-    x2: boundaryInfo.dataset[2][1],
-    y2: boundaryInfo.dataset[2][2],
+  const pointInfo = generatePointsFromCoefficients(trainingInfo.coefficients);
+
+  const data = [pointInfo.points1, pointInfo.points2];
+
+  data.forEach(points => {
+    const boundaryInfo = denormalizeData(points.map(buildFeatureVectorFromPoint), [0], normInfo.featureMeta, normInfo.outputMeta);
+    points.forEach((_, i) => {
+      if (i === 0) return;
+      const pt1 = boundaryInfo.dataset[i];
+      const pt2 = boundaryInfo.dataset[i - 1];
+      const line = new fabric.Line();
+      regressionLines.push(line);
+      fabricCanvas.add(line);
+      line.set({
+        stroke: ['red', 'green'][i % 2],
+        strokeWidth: 2,
+        objectCaching: false,
+        x1: pt1[1],
+        y1: pt1[2],
+        x2: pt2[1],
+        y2: pt2[2],
+      })
+    });
   })
+  
   return result.cost;
 }
 
-function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number, degree: number) {
-  trainingInfo.trainingData = user_data.map(x_coord => {
-    return [1, ...x_coord]
+function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number) {
+  const featureCount = buildFeatureVectorFromPoint([0, 0]).length;
+  trainingInfo.trainingData = user_data.map(coord => {
+    return buildFeatureVectorFromPoint(coord)
   });
   trainingInfo.trainingOutput = user_output;
-  trainingInfo.coefficients = new Array(degree + 1).fill(0);
+  trainingInfo.coefficients = new Array(featureCount).fill(0);
   
   // add UI info for fabric canvas
-  if (!solveAnimationInfo.regressionLine) {
-    solveAnimationInfo.regressionLine = new fabric.Line();
-    fabricCanvas.add(solveAnimationInfo.regressionLine);
-
+  if (!solveAnimationInfo.message) {
     solveAnimationInfo.message = new fabric.Text("");
     fabricCanvas.add(solveAnimationInfo.message);
   }
 
   const updater = () => {
     iterations--
-    solve(fabricCanvas, iterations, learningRate, degree);
+    solve(fabricCanvas, iterations, learningRate);
     fabricCanvas.renderAll();
     if (iterations === 0) return;
     solveAnimationInfo.animFrameId = window.requestAnimationFrame(updater);
@@ -136,6 +177,8 @@ const RadioButton = styled.button<{ selected: boolean, color: string }>`
   border: ${props => `8px solid ${props.selected ? "rgba(0, 0, 0, .5)" : "currentColor"}`};
 `;
 
+const SInput = styled(Input)``;
+
 const Button = styled.button`
   padding: 10px 20px;
 `;
@@ -143,7 +186,7 @@ const Button = styled.button`
 const Main = styled.div`
   display: flex;
   height: 100%;
-  label > span {
+  > ${SInput} span {
     width: 110px;
   }
 `;
@@ -159,7 +202,7 @@ function Perceptron() {
     stopSolve();
     user_data = [];
     user_output = [];
-    solveAnimationInfo.regressionLine = undefined;
+    solveAnimationInfo.regressionLines = [];
     solveAnimationInfo.message = undefined;
     if (fabricCanvas) {
       // why this check, 
@@ -189,7 +232,6 @@ function Perceptron() {
   const [cls, setClass] = useState('green');
   const [iterations, setIterations] = useState(10000);
   const [learningRate, setLearningRate] = useState(0.001);
-  const [degree, setDegree] = useState(2);
 
   const changeClass = (cls: string) => {
     const newClass = cls;
@@ -203,7 +245,7 @@ function Perceptron() {
       return;
     }
     stopSolve();
-    startSolve(fabricCanvas!, iterations, learningRate, degree);
+    startSolve(fabricCanvas!, iterations, learningRate);
   }
 
   return (
@@ -221,8 +263,8 @@ function Perceptron() {
           <Button onClick={stopSolve}>Stop</Button>
           <Button onClick={reset}>Reset</Button>
         </div>
-        <Input type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
-        <Input type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
+        <SInput type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
+        <SInput type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
       </div>
     </Main>
   );

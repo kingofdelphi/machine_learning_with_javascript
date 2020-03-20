@@ -16,6 +16,7 @@ const Label:StyledComponent<any, any> = styled.label`
 `;
 
 type Props = {
+  className?: string;
   type: string;
   label: string;
   value: string;
@@ -23,9 +24,9 @@ type Props = {
 }
 
 function Input(props: Props) {
-  const { type, label, value, onChange } = props;
+  const { className, type, label, value, onChange } = props;
   return (
-    <Label>
+    <Label className={className}>
       <span>{label}</span>
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
     </Label>

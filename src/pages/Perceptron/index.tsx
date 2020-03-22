@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { fabric } from 'fabric';
 import styled from 'styled-components';
 
+import * as MathJs from 'mathjs';
+
 import Input from "../../components/Input";
 
 import stepSolve, { } from '../../engine/perceptron';
@@ -63,7 +65,6 @@ function buildFeatureVectorFromPoint(point: Array<number>) {
 }
 
 const generatePointsFromCoefficients = (coefficients: Array<number>): { points1: Array<Row>, points2: Array<Row> } => {
-  const points: Array<Array<number>> = [];
   // bias + ax + by + cx^2 + dy^2 = 0
   const gety = (x: number) => {
       const C = coefficients[0] + coefficients[1] * x + coefficients[3] * x * x;
@@ -79,17 +80,34 @@ const generatePointsFromCoefficients = (coefficients: Array<number>): { points1:
         [x, (-B - f) / (2 * A)]
       ];
   };
-  const points2: Array<Array<number>> = []
+  const points: Array<Array<Array<number>>> = [[]];
+  const pointsRev: Array<Array<Array<number>>> = [[]];
+  let k = 0;
+  
   for (let x = -10 ; x <= 10; x += 0.005) {
     const pts = gety(x);
     if (pts.length > 0) {
-      points.push(pts[0]);
-      if (pts[1]) points2.push(pts[1])
+      points[k].push(pts[0]);
+      if (pts[1]) pointsRev[k].push(pts[1])
+    } else if (points.length === 1) {
+      // breakpoint region with no solution (for hyperbola)
+      points.push([]);
+      pointsRev.push([]);
+      k++;
     }
   }
+  const merge = (pointsA: Array<Array<number>>, pointsB: Array<Array<number>>) => {
+    if (pointsB.length !== pointsA.length || pointsA.length === 0) return pointsA;
+    const dist1 = MathJs.distance(pointsA[0], pointsB[0]);
+    const dist2 = MathJs.distance(pointsA[pointsA.length - 1], pointsB[pointsB.length - 1]);
+    if (dist1 < dist2) {
+      return pointsA.reverse().concat(pointsB);
+    }
+    return pointsA.concat(pointsB.reverse());
+  };
   return {
-    points1: points,
-    points2
+    points1: merge(points[0], pointsRev[0]),
+    points2: points.length < 2 ? [] : merge(points[1], pointsRev[1])
   }
 }
 

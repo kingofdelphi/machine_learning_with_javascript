@@ -3,7 +3,6 @@ import React from "react";
 import styled, { StyledComponent } from 'styled-components';
 
 const Label:StyledComponent<any, any> = styled.label`
-  padding: 5px;
   display: flex;
   align-items: center;
   span {
@@ -20,15 +19,17 @@ type Props = {
   type: string;
   label: string;
   value: string;
+  min?: string;
+  max?: string;
   onChange: (value: string) => void;
 }
 
 function Input(props: Props) {
-  const { className, type, label, value, onChange } = props;
+  const { className, type, label, value, min, max, onChange } = props;
   return (
     <Label className={className}>
       <span>{label}</span>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+      <input type={type} value={value} min={min} max={max} onChange={(e) => onChange(e.target.value)} />
     </Label>
   );
 };

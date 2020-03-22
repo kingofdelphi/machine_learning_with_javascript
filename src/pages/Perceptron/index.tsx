@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as MathJs from "mathjs";
 import { fabric } from 'fabric';
 import styled from 'styled-components';
 
@@ -188,7 +187,7 @@ const Button = styled.button`
 const Main = styled.div`
   display: flex;
   height: 100%;
-  > ${SInput} > span {
+  ${SInput} span {
     width: 110px;
   }
 `;

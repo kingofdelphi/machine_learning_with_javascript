@@ -18,11 +18,11 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
     const y = event.pointer!.y;
     x_coords.push(x);
     y_coords.push(y);
-    const r = 28;
+    const r = 20;
     const circle = new fabric.Circle({
       left: x - r / 2,
       top: y - r / 2,
-      radius: 3,
+      radius: 4,
       stroke: state.class,
       strokeWidth: r,
       fill: ''
@@ -74,7 +74,7 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
   const regData: Array<Row> = [];
   const regOutput: Array<number> = [];
   const { segmentCount, regressionLines } = solveAnimationInfo;
-  const L = -4, R = 4;
+  const L = -10, R = 10;
   for (let i = 0; i < segmentCount; ++i) {
     const x = i === 0 ? L : L + (R - L) * i / (segmentCount - 1);
     regData.push([x]);
@@ -165,15 +165,17 @@ const Button = styled.button`
   padding: 10px 20px;
 `;
 
+const SInput = styled(Input)``;
+
 const Main = styled.div`
   display: flex;
   height: 100%;
-  label > span {
+  ${SInput} > span {
     width: 110px;
   }
 `;
 
-function LinearRegression() {
+function Regression() {
   const ref = useRef(null);
 
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
@@ -245,12 +247,12 @@ function LinearRegression() {
           <Button onClick={stopSolve}>Stop</Button>
           <Button onClick={reset}>Reset</Button>
         </div>
-        <Input type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
-        <Input type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
-        <Input type="number" label="Degree" value={"" + degree} onChange={v => setDegree(+v)} />
+        <SInput type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
+        <SInput type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
+        <SInput type="number" label="Degree" value={"" + degree} onChange={v => setDegree(+v)} />
       </div>
     </Main>
   );
 }
 
-export default LinearRegression
+export default Regression

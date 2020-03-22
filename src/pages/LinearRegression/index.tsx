@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import Input from "../../components/Input";
 
 import stepSolve, { hypothesis } from '../../engine/regression';
-import { Row, normalizeData, denormalizeData } from '../../engine/common';
+import { NormalizationMeta, FeatureNormalizationMeta, Row, normalizeData, denormalizeData } from '../../engine/common';
 
 import styles from './styles.module.scss';
 
@@ -18,12 +18,13 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
     const y = event.pointer!.y;
     x_coords.push(x);
     y_coords.push(y);
+    const r = 28;
     const circle = new fabric.Circle({
-      left: x,
-      top: y,
+      left: x - r / 2,
+      top: y - r / 2,
       radius: 3,
       stroke: state.class,
-      strokeWidth: 28,
+      strokeWidth: r,
       fill: ''
     });
     canvas.add(circle);
@@ -42,12 +43,15 @@ interface TrainingInfo {
   trainingData: Array<Row>;
   trainingOutput: Array<number>;
   coefficients: Array<number>;
+  featureMeta: FeatureNormalizationMeta;
+  outputMeta?: NormalizationMeta;
 };
 
 const trainingInfo: TrainingInfo = {
   trainingData: [],
   trainingOutput: [],
-  coefficients: []
+  coefficients: [],
+  featureMeta: {}
 };
 
 interface SolveAnimationInfo {
@@ -63,9 +67,8 @@ const solveAnimationInfo: SolveAnimationInfo = {
 };
 
 function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number, degree: number) {
-  const { trainingData, trainingOutput, coefficients } = trainingInfo;
-  const normInfo = normalizeData(trainingData, trainingOutput);
-  const result = stepSolve(coefficients, normInfo.dataset, normInfo.output, learningRate, degree);
+  const { trainingData, trainingOutput, coefficients, featureMeta, outputMeta } = trainingInfo;
+  const result = stepSolve(coefficients, trainingData, trainingOutput, learningRate);
   trainingInfo.coefficients = result.coefficients;
 
   const regData: Array<Row> = [];
@@ -73,15 +76,17 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
   const { segmentCount, regressionLines } = solveAnimationInfo;
   const L = -4, R = 4;
   for (let i = 0; i < segmentCount; ++i) {
-    regData.push(buildRowFromXCoord(i === 0 ? L : L + (R - L) * i / (segmentCount - 1), degree));
-    regOutput.push(hypothesis(coefficients, regData[i]));
+    const x = i === 0 ? L : L + (R - L) * i / (segmentCount - 1);
+    regData.push([x]);
+    const row = buildRowFromXCoord(x, degree);
+    regOutput.push(hypothesis(coefficients, row));
   }
 
   solveAnimationInfo.message!.set({
     text: `Iterations Left: ${iterationsLeft}`
   });
 
-  const regression_line = denormalizeData(regData, regOutput, normInfo.featureMeta, normInfo.outputMeta);
+  const regression_line = denormalizeData(regData, regOutput, featureMeta, outputMeta!);
   const pts = regression_line.dataset;
   const ycords = regression_line.output;
 
@@ -91,9 +96,9 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
       stroke: ['red', 'green'][i % 2],
       strokeWidth: 2,
       objectCaching: false,
-      x1: pts[i][1],
+      x1: pts[i][0],
       y1: ycords[i],
-      x2: pts[i + 1][1],
+      x2: pts[i + 1][0],
       y2: ycords[i + 1],
     })
   }
@@ -101,10 +106,11 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
 }
 
 function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number, degree: number) {
-  trainingInfo.trainingData = x_coords.map(x_coord => {
-    return buildRowFromXCoord(x_coord, degree);
-  });
-  trainingInfo.trainingOutput = y_coords;
+  const normInfo = normalizeData(x_coords.map(d => [d]), y_coords);
+  trainingInfo.trainingData = normInfo.dataset.map(d => buildRowFromXCoord(d[0], degree));
+  trainingInfo.trainingOutput = normInfo.output;
+  trainingInfo.featureMeta = normInfo.featureMeta;
+  trainingInfo.outputMeta = normInfo.outputMeta;
   trainingInfo.coefficients = new Array(degree + 1).fill(0);
   
   // add UI info for fabric canvas

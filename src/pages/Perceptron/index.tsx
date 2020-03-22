@@ -6,7 +6,7 @@ import styled from 'styled-components';
 import Input from "../../components/Input";
 
 import stepSolve, { } from '../../engine/perceptron';
-import { Row, normalizeData, denormalizeData } from '../../engine/common';
+import { FeatureNormalizationMeta, Row, normalizeData, denormalizeData } from '../../engine/common';
 
 import styles from './styles.module.scss';
 
@@ -18,7 +18,7 @@ function updateFabricCanvas(canvas: fabric.Canvas, state: { [key:string]: any })
     const x = event.pointer!.x;
     const y = event.pointer!.y;
     const r = 20;
-    user_data.push([x - r / 2, y - r / 2]);
+    user_data.push([x, y]);
     user_output.push(state.class! === 'green' ? 1 : -1);
     const circle = new fabric.Circle({
       left: x - r / 2,
@@ -39,12 +39,14 @@ interface TrainingInfo {
   trainingData: Array<Row>;
   trainingOutput: Array<number>;
   coefficients: Array<number>;
+  featureMeta: FeatureNormalizationMeta;
 };
 
 const trainingInfo: TrainingInfo = {
   trainingData: [],
   trainingOutput: [],
-  coefficients: []
+  coefficients: [],
+  featureMeta: {}
 };
 
 interface SolveAnimationInfo {
@@ -93,9 +95,8 @@ const generatePointsFromCoefficients = (coefficients: Array<number>): { points1:
 }
 
 function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number) {
-  const { trainingData, trainingOutput, coefficients } = trainingInfo;
-  const normInfo = normalizeData(trainingData, trainingOutput);
-  const result = stepSolve(coefficients, normInfo.dataset, trainingOutput, learningRate);
+  const { trainingData, trainingOutput, coefficients, featureMeta } = trainingInfo;
+  const result = stepSolve(coefficients, trainingData, trainingOutput, learningRate);
   trainingInfo.coefficients = result.coefficients;
 
   const { regressionLines } = solveAnimationInfo;
@@ -111,7 +112,7 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
   const data = [pointInfo.points1, pointInfo.points2];
 
   data.forEach(points => {
-    const boundaryInfo = denormalizeData(points.map(buildFeatureVectorFromPoint), [0], normInfo.featureMeta, normInfo.outputMeta);
+    const boundaryInfo = denormalizeData(points, [0], featureMeta, { min: 0, max: 1 });
     points.forEach((_, i) => {
       if (i === 0) return;
       const pt1 = boundaryInfo.dataset[i];
@@ -123,10 +124,10 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
         stroke: ['red', 'green'][i % 2],
         strokeWidth: 2,
         objectCaching: false,
-        x1: pt1[1],
-        y1: pt1[2],
-        x2: pt2[1],
-        y2: pt2[2],
+        x1: pt1[0],
+        y1: pt1[1],
+        x2: pt2[0],
+        y2: pt2[1],
       })
     });
   })
@@ -136,10 +137,11 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
 
 function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number) {
   const featureCount = buildFeatureVectorFromPoint([0, 0]).length;
-  trainingInfo.trainingData = user_data.map(coord => {
-    return buildFeatureVectorFromPoint(coord)
-  });
+  
+  const normInfo = normalizeData(user_data, [0]);
+  trainingInfo.trainingData = normInfo.dataset.map(buildFeatureVectorFromPoint);
   trainingInfo.trainingOutput = user_output;
+  trainingInfo.featureMeta = normInfo.featureMeta;
   trainingInfo.coefficients = new Array(featureCount).fill(0);
   
   // add UI info for fabric canvas
@@ -186,7 +188,7 @@ const Button = styled.button`
 const Main = styled.div`
   display: flex;
   height: 100%;
-  > ${SInput} span {
+  > ${SInput} > span {
     width: 110px;
   }
 `;

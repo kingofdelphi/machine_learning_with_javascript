@@ -5,7 +5,7 @@ const hypothesis = (coefficients: Array<number>, datum: Row) => {
   return MathJs.dot(coefficients, datum);
 };
 
-const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output: Array<number>, learningRate: number, degree: number) => {
+const stepSolve = (coefficients: Array<number>, trainingSet: Array<Row>, output: Array<number>, learningRate: number) => {
   const errorDelta: Array<number> = [];
   let cost = 0;
 

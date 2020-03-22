@@ -246,6 +246,12 @@ function Perceptron() {
       alert("please add some points");
       return;
     }
+    const pos = user_output.filter(d => d === 1).length;
+    const neg = user_output.length - pos;
+    if (pos === 0 || neg === 0) {
+      alert("training set must contain both red and green classes");
+      return;
+    }
     stopSolve();
     startSolve(fabricCanvas!, iterations, learningRate);
   }

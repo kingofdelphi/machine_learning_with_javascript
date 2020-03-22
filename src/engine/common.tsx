@@ -11,6 +11,7 @@ export interface FeatureNormalizationMeta {
   [key: number]: NormalizationMeta
 }
 
+// data is a column of features
 export const getNormalizationMeta = (data: Array<number>) => {
   const outputMeta: NormalizationMeta = {
     min: MathJs.min(data),
@@ -20,6 +21,7 @@ export const getNormalizationMeta = (data: Array<number>) => {
   return outputMeta;
 };
 
+// dataset is array of world point
 export const denormalizeData = (dataset: Array<Row>, featureMeta: FeatureNormalizationMeta) => {
   const denormalizedData = dataset.map(datum => {
     return datum.map((featureValue, featureIndex) => {
@@ -32,6 +34,7 @@ export const denormalizeData = (dataset: Array<Row>, featureMeta: FeatureNormali
   }
 };
 
+// dataset is array of world point
 export const normalizeData = (dataset: Array<Row>) => {
   const featureMeta : FeatureNormalizationMeta = {};
   MathJs.transpose(dataset).forEach((d, i) => {

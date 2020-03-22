@@ -112,7 +112,7 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
   const data = [pointInfo.points1, pointInfo.points2];
 
   data.forEach(points => {
-    const boundaryInfo = denormalizeData(points, [0], featureMeta, { min: 0, max: 1 });
+    const boundaryInfo = denormalizeData(points, featureMeta);
     points.forEach((_, i) => {
       if (i === 0) return;
       const pt1 = boundaryInfo.dataset[i];
@@ -138,7 +138,7 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
 function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number) {
   const featureCount = buildFeatureVectorFromPoint([0, 0]).length;
   
-  const normInfo = normalizeData(user_data, [0]);
+  const normInfo = normalizeData(user_data);
   trainingInfo.trainingData = normInfo.dataset.map(buildFeatureVectorFromPoint);
   trainingInfo.trainingOutput = user_output;
   trainingInfo.featureMeta = normInfo.featureMeta;

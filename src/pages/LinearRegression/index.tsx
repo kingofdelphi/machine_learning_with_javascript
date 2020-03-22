@@ -86,9 +86,14 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
     text: `Iterations Left: ${iterationsLeft}`
   });
 
-  const regression_line = denormalizeData(regData, regOutput, featureMeta, outputMeta!);
-  const pts = regression_line.dataset;
-  const ycords = regression_line.output;
+  const modelToWorldInput = denormalizeData(regData, featureMeta);
+  const modelToWorldOutput = denormalizeData(regOutput.map(d => [d]), { 0: outputMeta! })
+
+  const pts = modelToWorldInput.dataset;
+  const ycords = modelToWorldOutput.dataset.reduce((acc, d) => {
+    acc.push(d[0]);
+    return acc;
+  }, []);
 
   for (let i = 0; i + 1 < segmentCount; ++i) {
     const line = regressionLines[i];
@@ -106,11 +111,16 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
 }
 
 function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number, degree: number) {
-  const normInfo = normalizeData(x_coords.map(d => [d]), y_coords);
-  trainingInfo.trainingData = normInfo.dataset.map(d => buildRowFromXCoord(d[0], degree));
-  trainingInfo.trainingOutput = normInfo.output;
-  trainingInfo.featureMeta = normInfo.featureMeta;
-  trainingInfo.outputMeta = normInfo.outputMeta;
+  const trainingInputNormInfo = normalizeData(x_coords.map(d => [d]));
+  const trainingOutputNormInfo = normalizeData(y_coords.map(d => [d]))
+  trainingInfo.trainingData = trainingInputNormInfo.dataset.map(d => buildRowFromXCoord(d[0], degree));
+  trainingInfo.trainingOutput = trainingOutputNormInfo.dataset.reduce(
+    (acc, d) => {
+      acc.push(d[0])
+      return acc;
+    }, []);
+  trainingInfo.featureMeta = trainingInputNormInfo.featureMeta;
+  trainingInfo.outputMeta = trainingOutputNormInfo.featureMeta[0];
   trainingInfo.coefficients = new Array(degree + 1).fill(0);
   
   // add UI info for fabric canvas
@@ -228,8 +238,7 @@ function LinearRegression() {
       <div className={styles.menu}>
         <div className={styles['cls-buttons']}>
           <RadioButton color="green" selected={cls === "green"} onClick={() => changeClass('green')} />
-          <RadioButton color="red" selected={cls === "red"} onClick={() => changeClass('red')} />
-          <span>Select the class and <br></br>click on middle window to drop</span>
+          <span>Click on middle window to create a point</span>
         </div>
         <div className={styles["action-buttons"]}>
           <Button onClick={animSolve}>Solve</Button>

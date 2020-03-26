@@ -39,7 +39,7 @@ const GridContainer = styled.div`
 `;
 
 function App() {
-  const [selectedChoice, setSelectedChoice] = useState('line');
+  const [selectedChoice, setSelectedChoice] = useState('perceptron');
   return (
     <GridContainer>
       <header>

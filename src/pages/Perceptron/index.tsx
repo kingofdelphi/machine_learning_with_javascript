@@ -6,7 +6,7 @@ import * as MathJs from 'mathjs';
 
 import Input from "../../components/Input";
 
-import stepSolve, { } from '../../engine/perceptron';
+import stepSolve, { Params } from '../../engine/perceptron';
 import { FeatureNormalizationMeta, Row, normalizeData, denormalizeData } from '../../engine/common';
 
 import styles from './styles.module.scss';
@@ -61,13 +61,14 @@ const solveAnimationInfo: SolveAnimationInfo = {
 };
 
 function buildFeatureVectorFromPoint(point: Array<number>) {
-  return [1, ...point, point[0] * point[0], point[1] * point[1]]
+  return [1, ...point]
 }
 
 const generatePointsFromCoefficients = (coefficients: Array<number>): { points1: Array<Row>, points2: Array<Row> } => {
   // bias + ax + by + cx^2 + dy^2 = 0
   const gety = (x: number) => {
-      const C = coefficients[0] + coefficients[1] * x + coefficients[3] * x * x;
+      const C = coefficients[0] + coefficients[1] * x;
+      return [[x, -C / coefficients[2]]];
       const A = coefficients[4];
       const B = coefficients[2];
       const det = B * B - 4 * A * C;
@@ -84,7 +85,7 @@ const generatePointsFromCoefficients = (coefficients: Array<number>): { points1:
   const pointsRev: Array<Array<Array<number>>> = [[]];
   let k = 0;
   
-  for (let x = -10 ; x <= 10; x += 0.005) {
+  for (let x = -5 ; x <= 5; x += 0.005) {
     const pts = gety(x);
     if (pts.length > 0) {
       points[k].push(pts[0]);
@@ -111,9 +112,9 @@ const generatePointsFromCoefficients = (coefficients: Array<number>): { points1:
   }
 }
 
-function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate: number) {
+function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, params: Params) {
   const { trainingData, trainingOutput, coefficients, featureMeta } = trainingInfo;
-  const result = stepSolve(coefficients, trainingData, trainingOutput, learningRate);
+  const result = stepSolve(coefficients, trainingData, trainingOutput, params);
   trainingInfo.coefficients = result.coefficients;
 
   const { regressionLines } = solveAnimationInfo;
@@ -152,7 +153,7 @@ function solve(fabricCanvas: fabric.Canvas, iterationsLeft: number, learningRate
   return result.cost;
 }
 
-function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRate: number) {
+function startSolve(fabricCanvas: fabric.Canvas, iterations: number, params: Params) {
   const featureCount = buildFeatureVectorFromPoint([0, 0]).length;
   
   const normInfo = normalizeData(user_data);
@@ -169,7 +170,7 @@ function startSolve(fabricCanvas: fabric.Canvas, iterations: number, learningRat
 
   const updater = () => {
     iterations--
-    solve(fabricCanvas, iterations, learningRate);
+    solve(fabricCanvas, iterations, params);
     fabricCanvas.renderAll();
     if (iterations === 0) return;
     solveAnimationInfo.animFrameId = window.requestAnimationFrame(updater);
@@ -251,6 +252,7 @@ function Perceptron() {
   const [cls, setClass] = useState('green');
   const [iterations, setIterations] = useState(10000);
   const [learningRate, setLearningRate] = useState(0.001);
+  const [margin, setMargin] = useState(0.001);
 
   const changeClass = (cls: string) => {
     const newClass = cls;
@@ -270,7 +272,11 @@ function Perceptron() {
       return;
     }
     stopSolve();
-    startSolve(fabricCanvas!, iterations, learningRate);
+    const params: Params = {
+      learningRate,
+      margin,
+    };
+    startSolve(fabricCanvas!, iterations, params);
   }
 
   return (
@@ -289,7 +295,8 @@ function Perceptron() {
           <Button onClick={reset}>Reset</Button>
         </div>
         <SInput type="number" label="Iterations" value={"" + iterations} onChange={v => setIterations(+v)} />
-        <SInput type="number" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
+        <SInput type="number" step="0.00000001" label="Learning Rate" value={"" + learningRate} onChange={v => setLearningRate(+v)} />
+        <SInput type="number" step="0.00000001" label="Margin" value={"" + margin} onChange={v => setMargin(+v)} />
       </div>
     </Main>
   );

@@ -21,15 +21,16 @@ type Props = {
   value: string;
   min?: string;
   max?: string;
+  step?: string;
   onChange: (value: string) => void;
 }
 
 function Input(props: Props) {
-  const { className, type, label, value, min, max, onChange } = props;
+  const { className, type, label, value, step, min, max, onChange } = props;
   return (
     <Label className={className}>
       <span>{label}</span>
-      <input type={type} value={value} min={min} max={max} onChange={(e) => onChange(e.target.value)} />
+      <input step={step} type={type} value={value} min={min} max={max} onChange={(e) => onChange(e.target.value)} />
     </Label>
   );
 };

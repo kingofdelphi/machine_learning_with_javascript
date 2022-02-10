@@ -16,7 +16,7 @@
     "add": "^2.0.6",
     "fabric": "^4.0.0-beta.7",
     "mathjs": "^6.6.1",
-    "node-sass": "^4.13.1",
+    "node-sass": "^7.0.0",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
     "react-scripts": "3.4.0",
